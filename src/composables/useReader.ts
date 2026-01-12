@@ -50,6 +50,13 @@ export function useReader(
       .join(' ');
   }
 
+  // Sentence-ending punctuation pattern
+  const SENTENCE_END_PATTERN = /[.!?;:]["'\)\]]*$/;
+
+  function hasSentenceEndingPunctuation(word: string): boolean {
+    return SENTENCE_END_PATTERN.test(word);
+  }
+
   function getDelayForWord(word: string): number {
     const baseDelay = 60000 / settings().baseWpm; // ms per word at base WPM
 
@@ -70,6 +77,11 @@ export function useReader(
       case 'other':
         multiplier = settings().otherMultiplier;
         break;
+    }
+
+    // Apply punctuation slowdown if word ends with sentence-ending punctuation
+    if (hasSentenceEndingPunctuation(word)) {
+      multiplier = Math.min(multiplier, settings().punctuationMultiplier);
     }
 
     // Lower multiplier = faster, so we divide

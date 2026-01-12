@@ -9,6 +9,7 @@ const defaultSettings: AppSettings = {
     top1kMultiplier: 1.0,
     top10kMultiplier: 0.7,
     otherMultiplier: 0.5,
+    punctuationMultiplier: 0.5,
     adaptiveSpeedEnabled: true,
     orpEnabled: false,
   },

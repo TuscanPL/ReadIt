@@ -17,6 +17,7 @@ const baseWpm = ref(props.settings.speed.baseWpm);
 const top1kMultiplier = ref(props.settings.speed.top1kMultiplier);
 const top10kMultiplier = ref(props.settings.speed.top10kMultiplier);
 const otherMultiplier = ref(props.settings.speed.otherMultiplier);
+const punctuationMultiplier = ref(props.settings.speed.punctuationMultiplier);
 const adaptiveSpeedEnabled = ref(props.settings.speed.adaptiveSpeedEnabled);
 const theme = ref(props.settings.theme);
 
@@ -26,6 +27,7 @@ watch(() => props.settings, (newSettings) => {
   top1kMultiplier.value = newSettings.speed.top1kMultiplier;
   top10kMultiplier.value = newSettings.speed.top10kMultiplier;
   otherMultiplier.value = newSettings.speed.otherMultiplier;
+  punctuationMultiplier.value = newSettings.speed.punctuationMultiplier;
   adaptiveSpeedEnabled.value = newSettings.speed.adaptiveSpeedEnabled;
   theme.value = newSettings.theme;
 }, { deep: true });
@@ -36,7 +38,7 @@ function handleWpmChange(e: Event) {
   emit('updateSpeedSettings', { baseWpm: baseWpm.value });
 }
 
-function handleMultiplierChange(type: 'top1k' | 'top10k' | 'other', e: Event) {
+function handleMultiplierChange(type: 'top1k' | 'top10k' | 'other' | 'punctuation', e: Event) {
   const value = parseFloat((e.target as HTMLInputElement).value) || 1;
   const clamped = Math.max(0.1, Math.min(2, value));
 
@@ -52,6 +54,10 @@ function handleMultiplierChange(type: 'top1k' | 'top10k' | 'other', e: Event) {
     case 'other':
       otherMultiplier.value = clamped;
       emit('updateSpeedSettings', { otherMultiplier: clamped });
+      break;
+    case 'punctuation':
+      punctuationMultiplier.value = clamped;
+      emit('updateSpeedSettings', { punctuationMultiplier: clamped });
       break;
   }
 }
@@ -152,6 +158,21 @@ function handleThemeChange(newTheme: 'dark' | 'light' | 'system') {
                 max="2"
                 :value="otherMultiplier"
                 @change="handleMultiplierChange('other', $event)"
+                :disabled="!adaptiveSpeedEnabled"
+                class="input-field small"
+              />
+            </div>
+
+            <div class="setting-item">
+              <label for="punctuation">Sentence endings (.!?;:)</label>
+              <input
+                id="punctuation"
+                type="number"
+                step="0.1"
+                min="0.1"
+                max="2"
+                :value="punctuationMultiplier"
+                @change="handleMultiplierChange('punctuation', $event)"
                 :disabled="!adaptiveSpeedEnabled"
                 class="input-field small"
               />
