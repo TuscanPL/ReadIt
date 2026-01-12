@@ -21,6 +21,7 @@ const emit = defineEmits<{
 }>();
 
 const showSkipControls = ref(false);
+const showPreview = ref(false);
 const previewRef = ref<HTMLElement | null>(null);
 
 const {
@@ -69,12 +70,14 @@ const previewWords = computed(() => {
 
 // Scroll to keep current word in view
 watch(currentWordIndex, () => {
-  nextTick(() => {
-    const currentEl = previewRef.value?.querySelector('.preview-word.current');
-    if (currentEl) {
-      currentEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
-  });
+  if (showPreview.value) {
+    nextTick(() => {
+      const currentEl = previewRef.value?.querySelector('.preview-word.current');
+      if (currentEl) {
+        currentEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    });
+  }
 });
 
 // Skip controls
@@ -91,6 +94,18 @@ function jumpToPercent(percent: number) {
 
 function toggleSkipControls() {
   showSkipControls.value = !showSkipControls.value;
+}
+
+function togglePreview() {
+  showPreview.value = !showPreview.value;
+  if (showPreview.value) {
+    nextTick(() => {
+      const currentEl = previewRef.value?.querySelector('.preview-word.current');
+      if (currentEl) {
+        currentEl.scrollIntoView({ block: 'center', behavior: 'instant' });
+      }
+    });
+  }
 }
 
 function handlePreviewWordClick(index: number) {
@@ -149,7 +164,10 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
         ← Back
       </button>
       <h2 class="file-name">{{ session.fileName }}</h2>
-      <button class="skip-toggle" @click="toggleSkipControls" :class="{ active: showSkipControls }">
+      <button class="header-btn" @click="togglePreview" :class="{ active: showPreview }">
+        Preview
+      </button>
+      <button class="header-btn" @click="toggleSkipControls" :class="{ active: showSkipControls }">
         Skip
       </button>
     </header>
@@ -183,6 +201,17 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
       </div>
     </div>
 
+    <!-- Text Preview (collapsible, above reader) -->
+    <div class="text-preview" v-if="showPreview" ref="previewRef">
+      <span
+        v-for="item in previewWords"
+        :key="item.index"
+        class="preview-word"
+        :class="{ current: item.isCurrent }"
+        @click="handlePreviewWordClick(item.index)"
+      >{{ item.word }}</span>
+    </div>
+
     <div
       class="reader-area"
       :class="{ 'is-reading': isReading, 'is-complete': isComplete }"
@@ -207,17 +236,6 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
       </p>
     </div>
 
-    <!-- Text Preview -->
-    <div class="text-preview" ref="previewRef">
-      <span
-        v-for="item in previewWords"
-        :key="item.index"
-        class="preview-word"
-        :class="{ current: item.isCurrent }"
-        @click="handlePreviewWordClick(item.index)"
-      >{{ item.word }}</span>
-    </div>
-
     <StopPointsHistory
       :stop-points="stopPoints"
       @jump="handleJumpToStop"
@@ -237,7 +255,7 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
 .reader-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .back-button {
@@ -265,19 +283,19 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
   text-overflow: ellipsis;
 }
 
-.skip-toggle {
+.header-btn {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text);
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   transition: all 0.2s;
 }
 
-.skip-toggle:hover,
-.skip-toggle.active {
+.header-btn:hover,
+.header-btn.active {
   background: var(--color-primary);
   border-color: var(--color-primary);
   color: white;
@@ -329,57 +347,6 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
   text-align: center;
 }
 
-.reader-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-surface);
-  border-radius: 16px;
-  padding: 2rem;
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
-  transition: all 0.15s ease;
-  min-height: 180px;
-}
-
-.reader-area.is-reading {
-  background: var(--color-primary-dim);
-}
-
-.reader-area.is-complete {
-  background: var(--color-success-dim);
-}
-
-.word-display {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60px;
-}
-
-.current-word {
-  font-size: clamp(2rem, 10vw, 3.5rem);
-  font-weight: 600;
-  color: var(--color-text);
-  text-align: center;
-  word-break: break-word;
-  line-height: 1.2;
-}
-
-.complete-message {
-  font-size: 2rem;
-  color: var(--color-success);
-}
-
-.reader-hint {
-  margin-top: 1rem;
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-}
-
 /* Text Preview */
 .text-preview {
   background: var(--color-surface);
@@ -412,5 +379,63 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
 
 .preview-word + .preview-word::before {
   content: ' ';
+}
+
+.reader-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+  border-radius: 16px;
+  padding: 1.5rem;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: all 0.15s ease;
+  min-height: 150px;
+  overflow: hidden;
+}
+
+.reader-area.is-reading {
+  background: var(--color-primary-dim);
+}
+
+.reader-area.is-complete {
+  background: var(--color-success-dim);
+}
+
+.word-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.current-word {
+  font-size: clamp(1.5rem, 8vw, 3rem);
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.2;
+}
+
+.complete-message {
+  font-size: 2rem;
+  color: var(--color-success);
+}
+
+.reader-hint {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
 }
 </style>
