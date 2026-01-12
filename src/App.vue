@@ -119,6 +119,7 @@ function closeSettings() {
       @progress="handleProgress"
       @stop="handleStop"
       @back="handleBack"
+      @update-settings="handleUpdateSpeedSettings"
     />
 
     <!-- Settings Panel -->

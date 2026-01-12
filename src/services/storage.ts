@@ -10,6 +10,7 @@ const defaultSettings: AppSettings = {
     top10kMultiplier: 0.7,
     otherMultiplier: 0.5,
     adaptiveSpeedEnabled: true,
+    orpEnabled: false,
   },
   theme: 'dark',
 };
