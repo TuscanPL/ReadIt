@@ -19,6 +19,7 @@ const top10kMultiplier = ref(props.settings.speed.top10kMultiplier);
 const otherMultiplier = ref(props.settings.speed.otherMultiplier);
 const punctuationMultiplier = ref(props.settings.speed.punctuationMultiplier);
 const adaptiveSpeedEnabled = ref(props.settings.speed.adaptiveSpeedEnabled);
+const orpOffset = ref(props.settings.speed.orpOffset ?? 10);
 const theme = ref(props.settings.theme);
 
 // Watch for prop changes
@@ -29,6 +30,7 @@ watch(() => props.settings, (newSettings) => {
   otherMultiplier.value = newSettings.speed.otherMultiplier;
   punctuationMultiplier.value = newSettings.speed.punctuationMultiplier;
   adaptiveSpeedEnabled.value = newSettings.speed.adaptiveSpeedEnabled;
+  orpOffset.value = newSettings.speed.orpOffset ?? 10;
   theme.value = newSettings.theme;
 }, { deep: true });
 
@@ -65,6 +67,12 @@ function handleMultiplierChange(type: 'top1k' | 'top10k' | 'other' | 'punctuatio
 function toggleAdaptiveSpeed() {
   adaptiveSpeedEnabled.value = !adaptiveSpeedEnabled.value;
   emit('updateSpeedSettings', { adaptiveSpeedEnabled: adaptiveSpeedEnabled.value });
+}
+
+function handleOrpOffsetChange(e: Event) {
+  const value = parseInt((e.target as HTMLInputElement).value) || 10;
+  orpOffset.value = Math.max(0, Math.min(50, value));
+  emit('updateSpeedSettings', { orpOffset: orpOffset.value });
 }
 
 function handleThemeChange(newTheme: 'dark' | 'light' | 'system') {
@@ -178,6 +186,27 @@ function handleThemeChange(newTheme: 'dark' | 'light' | 'system') {
               />
             </div>
           </div>
+        </section>
+
+        <section class="settings-section">
+          <h3>ORP Mode</h3>
+
+          <div class="setting-item">
+            <label for="orpOffset">Left offset (%)</label>
+            <input
+              id="orpOffset"
+              type="number"
+              min="0"
+              max="50"
+              :value="orpOffset"
+              @change="handleOrpOffsetChange"
+              class="input-field small"
+            />
+          </div>
+
+          <p class="setting-hint">
+            Shifts the focal point left of center. 0 = centered, higher = more left.
+          </p>
         </section>
 
         <section class="settings-section">
