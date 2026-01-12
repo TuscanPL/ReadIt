@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ['main', 'claude/speed-reading-app-qz4FQ']
+    branches: ['main']
   workflow_dispatch:
 
 permissions:

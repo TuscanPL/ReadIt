@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, watch, onMounted, onUnmounted, ref } from 'vue';
+import { computed, watch, onMounted, onUnmounted, ref, nextTick } from 'vue';
 import { useReader } from '../composables/useReader';
 import type { SpeedSettings, ReadingSession, StopPoint } from '../types';
 import ProgressIndicator from './ProgressIndicator.vue';
 import StopPointsHistory from './StopPointsHistory.vue';
 
 const WORDS_PER_PAGE = 250;
+const PREVIEW_CONTEXT_WORDS = 100;
 
 const props = defineProps<{
   session: ReadingSession;
@@ -20,8 +21,10 @@ const emit = defineEmits<{
 }>();
 
 const showSkipControls = ref(false);
+const previewRef = ref<HTMLElement | null>(null);
 
 const {
+  words,
   currentWord,
   currentWordIndex,
   isReading,
@@ -52,6 +55,28 @@ watch(() => props.session.currentWordIndex, (newIndex) => {
   }
 });
 
+// Preview window calculation
+const previewStart = computed(() => Math.max(0, currentWordIndex.value - PREVIEW_CONTEXT_WORDS));
+const previewEnd = computed(() => Math.min(words.value.length, currentWordIndex.value + PREVIEW_CONTEXT_WORDS + 1));
+
+const previewWords = computed(() => {
+  return words.value.slice(previewStart.value, previewEnd.value).map((word, i) => ({
+    word,
+    index: previewStart.value + i,
+    isCurrent: previewStart.value + i === currentWordIndex.value,
+  }));
+});
+
+// Scroll to keep current word in view
+watch(currentWordIndex, () => {
+  nextTick(() => {
+    const currentEl = previewRef.value?.querySelector('.preview-word.current');
+    if (currentEl) {
+      currentEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  });
+});
+
 // Skip controls
 function skipPages(pages: number) {
   const wordsToSkip = pages * WORDS_PER_PAGE;
@@ -66,6 +91,10 @@ function jumpToPercent(percent: number) {
 
 function toggleSkipControls() {
   showSkipControls.value = !showSkipControls.value;
+}
+
+function handlePreviewWordClick(index: number) {
+  jumpToWord(index);
 }
 
 // Touch/mouse handlers
@@ -176,6 +205,17 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
       <p class="reader-hint" v-else-if="!isComplete">
         Reading...
       </p>
+    </div>
+
+    <!-- Text Preview -->
+    <div class="text-preview" ref="previewRef">
+      <span
+        v-for="item in previewWords"
+        :key="item.index"
+        class="preview-word"
+        :class="{ current: item.isCurrent }"
+        @click="handlePreviewWordClick(item.index)"
+      >{{ item.word }}</span>
     </div>
 
     <StopPointsHistory
@@ -290,7 +330,6 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
 }
 
 .reader-area {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -303,7 +342,7 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
   -webkit-user-select: none;
   touch-action: none;
   transition: all 0.15s ease;
-  min-height: 250px;
+  min-height: 180px;
 }
 
 .reader-area.is-reading {
@@ -318,11 +357,11 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100px;
+  min-height: 60px;
 }
 
 .current-word {
-  font-size: clamp(2rem, 10vw, 4rem);
+  font-size: clamp(2rem, 10vw, 3.5rem);
   font-weight: 600;
   color: var(--color-text);
   text-align: center;
@@ -336,8 +375,42 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
 }
 
 .reader-hint {
-  margin-top: 2rem;
+  margin-top: 1rem;
   font-size: 0.875rem;
   color: var(--color-text-secondary);
+}
+
+/* Text Preview */
+.text-preview {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 1rem;
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.preview-word {
+  cursor: pointer;
+  padding: 0.1rem 0.15rem;
+  border-radius: 2px;
+  transition: background 0.1s;
+}
+
+.preview-word:hover {
+  background: var(--color-surface-hover);
+}
+
+.preview-word.current {
+  color: #ef4444;
+  font-weight: 600;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.preview-word + .preview-word::before {
+  content: ' ';
 }
 </style>
