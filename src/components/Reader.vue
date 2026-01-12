@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, watch, onMounted, onUnmounted } from 'vue';
+import { computed, watch, onMounted, onUnmounted, ref } from 'vue';
 import { useReader } from '../composables/useReader';
 import type { SpeedSettings, ReadingSession, StopPoint } from '../types';
 import ProgressIndicator from './ProgressIndicator.vue';
 import StopPointsHistory from './StopPointsHistory.vue';
+
+const WORDS_PER_PAGE = 250;
 
 const props = defineProps<{
   session: ReadingSession;
@@ -17,6 +19,7 @@ const emit = defineEmits<{
   back: [];
 }>();
 
+const showSkipControls = ref(false);
 
 const {
   currentWord,
@@ -48,6 +51,22 @@ watch(() => props.session.currentWordIndex, (newIndex) => {
     setWordIndex(newIndex);
   }
 });
+
+// Skip controls
+function skipPages(pages: number) {
+  const wordsToSkip = pages * WORDS_PER_PAGE;
+  const newIndex = Math.max(0, Math.min(totalWords.value - 1, currentWordIndex.value + wordsToSkip));
+  jumpToWord(newIndex);
+}
+
+function jumpToPercent(percent: number) {
+  const targetIndex = Math.floor((percent / 100) * totalWords.value);
+  jumpToWord(Math.max(0, Math.min(totalWords.value - 1, targetIndex)));
+}
+
+function toggleSkipControls() {
+  showSkipControls.value = !showSkipControls.value;
+}
 
 // Touch/mouse handlers
 function handleTouchStart(e: TouchEvent | MouseEvent) {
@@ -89,6 +108,8 @@ function handleJumpToStop(wordIndex: number) {
   jumpToWord(wordIndex);
 }
 
+const currentPage = computed(() => Math.floor(currentWordIndex.value / WORDS_PER_PAGE) + 1);
+const totalPages = computed(() => Math.ceil(totalWords.value / WORDS_PER_PAGE));
 const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
 </script>
 
@@ -99,6 +120,9 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
         ← Back
       </button>
       <h2 class="file-name">{{ session.fileName }}</h2>
+      <button class="skip-toggle" @click="toggleSkipControls" :class="{ active: showSkipControls }">
+        Skip
+      </button>
     </header>
 
     <ProgressIndicator
@@ -108,6 +132,27 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
       :pages-remaining="estimatedPagesRemaining"
       :words-remaining="wordsRemaining"
     />
+
+    <!-- Skip Controls Panel -->
+    <div class="skip-controls" v-if="showSkipControls">
+      <div class="skip-row">
+        <button class="skip-btn" @click="skipPages(-10)">-10p</button>
+        <button class="skip-btn" @click="skipPages(-5)">-5p</button>
+        <button class="skip-btn" @click="skipPages(-1)">-1p</button>
+        <span class="page-indicator">{{ currentPage }}/{{ totalPages }}</span>
+        <button class="skip-btn" @click="skipPages(1)">+1p</button>
+        <button class="skip-btn" @click="skipPages(5)">+5p</button>
+        <button class="skip-btn" @click="skipPages(10)">+10p</button>
+      </div>
+      <div class="jump-row">
+        <button class="jump-btn" @click="jumpToPercent(0)">Start</button>
+        <button class="jump-btn" @click="jumpToPercent(10)">10%</button>
+        <button class="jump-btn" @click="jumpToPercent(25)">25%</button>
+        <button class="jump-btn" @click="jumpToPercent(50)">50%</button>
+        <button class="jump-btn" @click="jumpToPercent(75)">75%</button>
+        <button class="jump-btn" @click="jumpToPercent(90)">90%</button>
+      </div>
+    </div>
 
     <div
       class="reader-area"
@@ -126,7 +171,7 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
       </div>
 
       <p class="reader-hint" v-if="!isReading && !isComplete">
-        Hold to read • Release to pause
+        Hold to read
       </p>
       <p class="reader-hint" v-else-if="!isComplete">
         Reading...
@@ -171,12 +216,77 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
 }
 
 .file-name {
+  flex: 1;
   font-size: 1rem;
   color: var(--color-text-secondary);
   font-weight: normal;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.skip-toggle {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.skip-toggle:hover,
+.skip-toggle.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.skip-controls {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skip-row,
+.jump-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.skip-btn,
+.jump-btn {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+  min-width: 44px;
+}
+
+.skip-btn:hover,
+.jump-btn:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.page-indicator {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  min-width: 60px;
+  text-align: center;
 }
 
 .reader-area {
@@ -193,7 +303,7 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
   -webkit-user-select: none;
   touch-action: none;
   transition: all 0.15s ease;
-  min-height: 300px;
+  min-height: 250px;
 }
 
 .reader-area.is-reading {
