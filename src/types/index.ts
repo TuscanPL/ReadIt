@@ -19,6 +19,7 @@ export interface SpeedSettings {
   top1kMultiplier: number;    // Default 1.0
   top10kMultiplier: number;   // Default 0.7
   otherMultiplier: number;    // Default 0.5
+  punctuationMultiplier: number; // Default 0.5 (slower for sentence endings)
   adaptiveSpeedEnabled: boolean;
   orpEnabled: boolean;        // Optimal Recognition Point mode
 }
