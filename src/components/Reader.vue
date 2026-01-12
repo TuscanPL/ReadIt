@@ -155,6 +155,20 @@ function handleJumpToStop(wordIndex: number) {
 const currentPage = computed(() => Math.floor(currentWordIndex.value / WORDS_PER_PAGE) + 1);
 const totalPages = computed(() => Math.ceil(totalWords.value / WORDS_PER_PAGE));
 const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
+
+// Dynamic font size based on word length
+const wordFontSize = computed(() => {
+  const word = currentWord.value;
+  const len = word.length;
+
+  // Base size for short words (1-6 chars), shrink for longer words
+  if (len <= 6) return '3rem';
+  if (len <= 10) return '2.5rem';
+  if (len <= 14) return '2rem';
+  if (len <= 18) return '1.6rem';
+  if (len <= 24) return '1.3rem';
+  return '1rem';
+});
 </script>
 
 <template>
@@ -225,7 +239,7 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
         <span v-if="isComplete" class="complete-message">
           Finished!
         </span>
-        <span v-else class="current-word">{{ currentWord }}</span>
+        <span v-else class="current-word" :style="{ fontSize: wordFontSize }">{{ currentWord }}</span>
       </div>
 
       <p class="reader-hint" v-if="!isReading && !isComplete">
@@ -417,14 +431,10 @@ const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
 }
 
 .current-word {
-  font-size: clamp(1.5rem, 8vw, 3rem);
   font-weight: 600;
   color: var(--color-text);
   text-align: center;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
   line-height: 1.2;
 }
 
