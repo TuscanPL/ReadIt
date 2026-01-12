@@ -161,18 +161,17 @@ const currentPage = computed(() => Math.floor(currentWordIndex.value / WORDS_PER
 const totalPages = computed(() => Math.ceil(totalWords.value / WORDS_PER_PAGE));
 const isComplete = computed(() => currentWordIndex.value >= totalWords.value);
 
-// Dynamic font size based on word length
+// Dynamic font size based on word length - only shrink for very long words
 const wordFontSize = computed(() => {
   const word = currentWord.value;
   const len = word.length;
 
-  // Base size for short words (1-6 chars), shrink for longer words
-  if (len <= 6) return '3rem';
-  if (len <= 10) return '2.5rem';
-  if (len <= 14) return '2rem';
-  if (len <= 18) return '1.6rem';
-  if (len <= 24) return '1.3rem';
-  return '1rem';
+  // Keep 3rem for most words, only shrink for genuinely long words
+  if (len <= 12) return '3rem';
+  if (len <= 16) return '2.5rem';
+  if (len <= 20) return '2rem';
+  if (len <= 26) return '1.6rem';
+  return '1.3rem';
 });
 
 // ORP (Optimal Recognition Point) calculation
@@ -317,10 +316,13 @@ const orpParts = computed(() => {
   cursor: pointer;
   font-size: 0.875rem;
   transition: background 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.back-button:hover {
-  background: var(--color-surface-hover);
+@media (hover: hover) {
+  .back-button:hover {
+    background: var(--color-surface-hover);
+  }
 }
 
 .file-name {
@@ -342,13 +344,19 @@ const orpParts = computed(() => {
   cursor: pointer;
   font-size: 0.8rem;
   transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.header-btn:hover,
 .header-btn.active {
   background: var(--color-primary);
   border-color: var(--color-primary);
   color: white;
+}
+
+@media (hover: hover) {
+  .header-btn:hover:not(.active) {
+    background: var(--color-surface-hover);
+  }
 }
 
 .skip-controls {
@@ -381,13 +389,23 @@ const orpParts = computed(() => {
   font-size: 0.8rem;
   transition: all 0.2s;
   min-width: 44px;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.skip-btn:hover,
-.jump-btn:hover {
+.skip-btn:active,
+.jump-btn:active {
   background: var(--color-primary);
   border-color: var(--color-primary);
   color: white;
+}
+
+@media (hover: hover) {
+  .skip-btn:hover,
+  .jump-btn:hover {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+  }
 }
 
 .page-indicator {
@@ -415,10 +433,13 @@ const orpParts = computed(() => {
   padding: 0.1rem 0.15rem;
   border-radius: 2px;
   transition: background 0.1s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.preview-word:hover {
-  background: var(--color-surface-hover);
+@media (hover: hover) {
+  .preview-word:hover {
+    background: var(--color-surface-hover);
+  }
 }
 
 .preview-word.current {
@@ -462,7 +483,7 @@ const orpParts = computed(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 50px;
+  height: 80px;
   max-width: 100%;
   position: relative;
 }
