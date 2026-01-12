@@ -12,6 +12,7 @@ const defaultSettings: AppSettings = {
     punctuationMultiplier: 0.5,
     adaptiveSpeedEnabled: true,
     orpEnabled: false,
+    orpOffset: 10,
   },
   theme: 'dark',
 };

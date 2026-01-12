@@ -22,6 +22,7 @@ export interface SpeedSettings {
   punctuationMultiplier: number; // Default 0.5 (slower for sentence endings)
   adaptiveSpeedEnabled: boolean;
   orpEnabled: boolean;        // Optimal Recognition Point mode
+  orpOffset: number;          // Left offset percentage (0-50), default 10
 }
 
 export interface AppSettings {

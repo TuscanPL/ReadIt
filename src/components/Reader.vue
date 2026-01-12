@@ -191,6 +191,14 @@ const orpParts = computed(() => {
     after: word.slice(orpIndex + 1),
   };
 });
+
+// ORP left offset style
+const orpOffsetStyle = computed(() => {
+  const offset = props.settings.orpOffset ?? 10;
+  return {
+    transform: `translateX(-${offset}%)`,
+  };
+});
 </script>
 
 <template>
@@ -266,12 +274,14 @@ const orpParts = computed(() => {
         </span>
         <!-- ORP Mode -->
         <template v-else-if="settings.orpEnabled">
-          <div class="orp-container" :style="{ fontSize: wordFontSize }">
-            <span class="orp-before">{{ orpParts.before }}</span>
-            <span class="orp-focus">{{ orpParts.orp }}</span>
-            <span class="orp-after">{{ orpParts.after }}</span>
+          <div class="orp-wrapper" :style="orpOffsetStyle">
+            <div class="orp-container" :style="{ fontSize: wordFontSize }">
+              <span class="orp-before">{{ orpParts.before }}</span>
+              <span class="orp-focus">{{ orpParts.orp }}</span>
+              <span class="orp-after">{{ orpParts.after }}</span>
+            </div>
+            <div class="orp-marker"></div>
           </div>
-          <div class="orp-marker"></div>
         </template>
         <!-- Normal Mode -->
         <span v-else class="current-word" :style="{ fontSize: wordFontSize }">{{ currentWord }}</span>
@@ -497,6 +507,12 @@ const orpParts = computed(() => {
 }
 
 /* ORP Mode Styles */
+.orp-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .orp-container {
   display: flex;
   align-items: center;
