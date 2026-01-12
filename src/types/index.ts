@@ -20,6 +20,7 @@ export interface SpeedSettings {
   top10kMultiplier: number;   // Default 0.7
   otherMultiplier: number;    // Default 0.5
   adaptiveSpeedEnabled: boolean;
+  orpEnabled: boolean;        // Optimal Recognition Point mode
 }
 
 export interface AppSettings {

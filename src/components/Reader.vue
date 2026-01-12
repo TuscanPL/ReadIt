@@ -18,6 +18,7 @@ const emit = defineEmits<{
   progress: [wordIndex: number];
   stop: [wordIndex: number, context: string];
   back: [];
+  updateSettings: [settings: Partial<SpeedSettings>];
 }>();
 
 const showSkipControls = ref(false);
@@ -108,6 +109,10 @@ function togglePreview() {
   }
 }
 
+function toggleOrp() {
+  emit('updateSettings', { orpEnabled: !props.settings.orpEnabled });
+}
+
 function handlePreviewWordClick(index: number) {
   jumpToWord(index);
 }
@@ -169,6 +174,24 @@ const wordFontSize = computed(() => {
   if (len <= 24) return '1.3rem';
   return '1rem';
 });
+
+// ORP (Optimal Recognition Point) calculation
+function calculateOrpIndex(word: string): number {
+  if (word.length <= 1) return 0;
+  return Math.floor(word.length * 0.35);
+}
+
+const orpParts = computed(() => {
+  const word = currentWord.value;
+  if (!word) return { before: '', orp: '', after: '' };
+
+  const orpIndex = calculateOrpIndex(word);
+  return {
+    before: word.slice(0, orpIndex),
+    orp: word[orpIndex] || '',
+    after: word.slice(orpIndex + 1),
+  };
+});
 </script>
 
 <template>
@@ -178,6 +201,9 @@ const wordFontSize = computed(() => {
         ← Back
       </button>
       <h2 class="file-name">{{ session.fileName }}</h2>
+      <button class="header-btn" @click="toggleOrp" :class="{ active: settings.orpEnabled }">
+        ORP
+      </button>
       <button class="header-btn" @click="togglePreview" :class="{ active: showPreview }">
         Preview
       </button>
@@ -239,6 +265,16 @@ const wordFontSize = computed(() => {
         <span v-if="isComplete" class="complete-message">
           Finished!
         </span>
+        <!-- ORP Mode -->
+        <template v-else-if="settings.orpEnabled">
+          <div class="orp-container" :style="{ fontSize: wordFontSize }">
+            <span class="orp-before">{{ orpParts.before }}</span>
+            <span class="orp-focus">{{ orpParts.orp }}</span>
+            <span class="orp-after">{{ orpParts.after }}</span>
+          </div>
+          <div class="orp-marker"></div>
+        </template>
+        <!-- Normal Mode -->
         <span v-else class="current-word" :style="{ fontSize: wordFontSize }">{{ currentWord }}</span>
       </div>
 
@@ -423,11 +459,12 @@ const wordFontSize = computed(() => {
 
 .word-display {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 50px;
   max-width: 100%;
-  overflow: hidden;
+  position: relative;
 }
 
 .current-word {
@@ -436,6 +473,40 @@ const wordFontSize = computed(() => {
   text-align: center;
   white-space: nowrap;
   line-height: 1.2;
+}
+
+/* ORP Mode Styles */
+.orp-container {
+  display: flex;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.orp-before {
+  color: var(--color-text);
+  text-align: right;
+  min-width: 4ch;
+  display: inline-block;
+  direction: rtl;
+}
+
+.orp-focus {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.orp-after {
+  color: var(--color-text);
+  text-align: left;
+}
+
+.orp-marker {
+  width: 2px;
+  height: 8px;
+  background: #ef4444;
+  margin-top: 4px;
+  border-radius: 1px;
 }
 
 .complete-message {
