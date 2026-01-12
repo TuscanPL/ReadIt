@@ -478,6 +478,7 @@ const orpParts = computed(() => {
 /* ORP Mode Styles */
 .orp-container {
   display: flex;
+  align-items: center;
   font-weight: 600;
   white-space: nowrap;
   line-height: 1.2;
@@ -486,19 +487,23 @@ const orpParts = computed(() => {
 .orp-before {
   color: var(--color-text);
   text-align: right;
-  min-width: 4ch;
-  display: inline-block;
-  direction: rtl;
+  width: 45vw;
+  max-width: 200px;
+  overflow: hidden;
 }
 
 .orp-focus {
   color: #ef4444;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .orp-after {
   color: var(--color-text);
   text-align: left;
+  width: 45vw;
+  max-width: 200px;
+  overflow: hidden;
 }
 
 .orp-marker {
