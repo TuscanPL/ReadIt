@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { parseEpub } from '../services/epubParser';
+import type { TocEntry } from '../types';
 
 const emit = defineEmits<{
-  fileLoaded: [fileName: string, content: string];
+  fileLoaded: [fileName: string, content: string, toc?: TocEntry[]];
 }>();
 
 const isDragging = ref(false);
@@ -58,7 +59,13 @@ async function processFile(file: File) {
     if (extension === '.epub') {
       const result = await parseEpub(file);
       const displayName = result.metadata.title || file.name;
-      emit('fileLoaded', displayName, result.text);
+      // Convert epub TOC to our TocEntry format (drop href, keep what we need)
+      const toc: TocEntry[] = result.toc.map(entry => ({
+        title: entry.title,
+        wordIndex: entry.wordIndex,
+        level: entry.level,
+      }));
+      emit('fileLoaded', displayName, result.text, toc.length > 0 ? toc : undefined);
     } else {
       // .txt file
       const content = await readTextFile(file);

@@ -1,9 +1,16 @@
+export interface TocEntry {
+  title: string;
+  wordIndex: number;
+  level: number;
+}
+
 export interface ReadingSession {
   id: string;
   fileName: string;
   content: string;
   currentWordIndex: number;
   totalWords: number;
+  toc?: TocEntry[];  // Table of contents (for EPUBs)
   createdAt: number;
   updatedAt: number;
 }

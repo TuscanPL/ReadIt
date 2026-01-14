@@ -4,6 +4,7 @@ import { useReader } from '../composables/useReader';
 import type { SpeedSettings, ReadingSession, StopPoint } from '../types';
 import ProgressIndicator from './ProgressIndicator.vue';
 import StopPointsHistory from './StopPointsHistory.vue';
+import TableOfContents from './TableOfContents.vue';
 
 const WORDS_PER_PAGE = 250;
 const PREVIEW_CONTEXT_WORDS = 100;
@@ -23,7 +24,11 @@ const emit = defineEmits<{
 
 const showSkipControls = ref(false);
 const showPreview = ref(false);
+const showToc = ref(false);
 const previewRef = ref<HTMLElement | null>(null);
+
+// Check if session has TOC
+const hasToc = computed(() => (props.session.toc?.length ?? 0) > 0);
 
 const {
   words,
@@ -95,6 +100,14 @@ function jumpToPercent(percent: number) {
 
 function toggleSkipControls() {
   showSkipControls.value = !showSkipControls.value;
+}
+
+function toggleToc() {
+  showToc.value = !showToc.value;
+}
+
+function handleTocJump(wordIndex: number) {
+  jumpToWord(wordIndex);
 }
 
 function togglePreview() {
@@ -221,6 +234,14 @@ const orpMarkerStyle = computed(() => {
         ← Back
       </button>
       <h2 class="file-name">{{ session.fileName }}</h2>
+      <button
+        v-if="hasToc"
+        class="header-btn"
+        @click="toggleToc"
+        :class="{ active: showToc }"
+      >
+        TOC
+      </button>
       <button class="header-btn" @click="toggleOrp" :class="{ active: settings.orpEnabled }">
         ORP
       </button>
@@ -309,6 +330,15 @@ const orpMarkerStyle = computed(() => {
     <StopPointsHistory
       :stop-points="stopPoints"
       @jump="handleJumpToStop"
+    />
+
+    <!-- Table of Contents overlay -->
+    <TableOfContents
+      v-if="showToc && session.toc"
+      :toc="session.toc"
+      :current-word-index="currentWordIndex"
+      @jump="handleTocJump"
+      @close="showToc = false"
     />
   </div>
 </template>
