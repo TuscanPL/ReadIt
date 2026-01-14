@@ -192,12 +192,25 @@ const orpParts = computed(() => {
   };
 });
 
-// ORP left offset style
-const orpOffsetStyle = computed(() => {
+// ORP width styles - offset by making before narrower and after wider
+const orpBeforeStyle = computed(() => {
   const offset = props.settings.orpOffset ?? 10;
-  return {
-    transform: `translateX(-${offset}%)`,
-  };
+  // Base is 45vw, reduce by offset percentage
+  const width = 45 - offset;
+  return { width: `${width}vw`, maxWidth: `${200 - offset * 4}px` };
+});
+
+const orpAfterStyle = computed(() => {
+  const offset = props.settings.orpOffset ?? 10;
+  // Base is 45vw, increase by offset percentage
+  const width = 45 + offset;
+  return { width: `${width}vw`, maxWidth: `${200 + offset * 4}px` };
+});
+
+// Marker needs to shift left to stay aligned with focal point
+const orpMarkerStyle = computed(() => {
+  const offset = props.settings.orpOffset ?? 10;
+  return { transform: `translateX(-${offset}vw)` };
 });
 </script>
 
@@ -274,14 +287,12 @@ const orpOffsetStyle = computed(() => {
         </span>
         <!-- ORP Mode -->
         <template v-else-if="settings.orpEnabled">
-          <div class="orp-wrapper" :style="orpOffsetStyle">
-            <div class="orp-container" :style="{ fontSize: wordFontSize }">
-              <span class="orp-before">{{ orpParts.before }}</span>
-              <span class="orp-focus">{{ orpParts.orp }}</span>
-              <span class="orp-after">{{ orpParts.after }}</span>
-            </div>
-            <div class="orp-marker"></div>
+          <div class="orp-container" :style="{ fontSize: wordFontSize }">
+            <span class="orp-before" :style="orpBeforeStyle">{{ orpParts.before }}</span>
+            <span class="orp-focus">{{ orpParts.orp }}</span>
+            <span class="orp-after" :style="orpAfterStyle">{{ orpParts.after }}</span>
           </div>
+          <div class="orp-marker" :style="orpMarkerStyle"></div>
         </template>
         <!-- Normal Mode -->
         <span v-else class="current-word" :style="{ fontSize: wordFontSize }">{{ currentWord }}</span>
@@ -507,12 +518,6 @@ const orpOffsetStyle = computed(() => {
 }
 
 /* ORP Mode Styles */
-.orp-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
 .orp-container {
   display: flex;
   align-items: center;
@@ -524,8 +529,6 @@ const orpOffsetStyle = computed(() => {
 .orp-before {
   color: var(--color-text);
   text-align: right;
-  width: 45vw;
-  max-width: 200px;
   overflow: hidden;
 }
 
@@ -538,8 +541,6 @@ const orpOffsetStyle = computed(() => {
 .orp-after {
   color: var(--color-text);
   text-align: left;
-  width: 45vw;
-  max-width: 200px;
   overflow: hidden;
 }
 
