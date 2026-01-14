@@ -6,9 +6,17 @@ export interface EpubMetadata {
   language?: string;
 }
 
+export interface TocEntry {
+  title: string;
+  href: string;        // Original href from TOC
+  wordIndex: number;   // Starting word index in our content
+  level: number;       // Nesting level (1 = top level)
+}
+
 export interface EpubContent {
   metadata: EpubMetadata;
   text: string;
+  toc: TocEntry[];
 }
 
 export async function parseEpub(file: File): Promise<EpubContent> {
@@ -38,8 +46,13 @@ export async function parseEpub(file: File): Promise<EpubContent> {
   const spine = parseSpine(opfContent);
   const manifest = parseManifest(opfContent);
 
-  // Read content files in spine order
+  // Try to get TOC
+  const rawToc = await parseToc(zip, opfContent, opfDir, manifest);
+
+  // Read content files in spine order, tracking word positions per file
   const textParts: string[] = [];
+  const fileWordPositions = new Map<string, number>(); // href -> starting word index
+  let currentWordIndex = 0;
 
   for (const itemId of spine) {
     const item = manifest.get(itemId);
@@ -50,14 +63,25 @@ export async function parseEpub(file: File): Promise<EpubContent> {
     if (content) {
       const text = extractTextFromHtml(content);
       if (text.trim()) {
+        // Store the word position for this file
+        fileWordPositions.set(item.href, currentWordIndex);
+
+        // Also store with full path for matching
+        fileWordPositions.set(itemPath, currentWordIndex);
+
         textParts.push(text);
+        currentWordIndex += text.split(/\s+/).filter(w => w.length > 0).length;
       }
     }
   }
 
+  // Map TOC entries to word indices
+  const toc = mapTocToWordIndices(rawToc, fileWordPositions, opfDir);
+
   return {
     metadata,
     text: textParts.join('\n\n'),
+    toc,
   };
 }
 
@@ -185,4 +209,171 @@ function extractTextFromElement(element: Element): string {
     .replace(/\s+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+// Raw TOC entry before word index mapping
+interface RawTocEntry {
+  title: string;
+  href: string;
+  level: number;
+}
+
+// Parse TOC - try NCX first (EPUB 2), then NAV (EPUB 3)
+async function parseToc(
+  zip: JSZip,
+  opfContent: string,
+  opfDir: string,
+  manifest: Map<string, ManifestItem>
+): Promise<RawTocEntry[]> {
+  const parser = new DOMParser();
+  const opfDoc = parser.parseFromString(opfContent, 'application/xml');
+
+  // Try EPUB 3 NAV document first (look for item with properties="nav")
+  for (const [, item] of manifest) {
+    const manifestItem = opfDoc.querySelector(`manifest item[id="${item.id}"]`);
+    const properties = manifestItem?.getAttribute('properties') || '';
+    if (properties.includes('nav')) {
+      const navPath = opfDir + item.href;
+      const navContent = await zip.file(navPath)?.async('text');
+      if (navContent) {
+        const toc = parseNavToc(navContent);
+        if (toc.length > 0) return toc;
+      }
+    }
+  }
+
+  // Try EPUB 2 NCX
+  const spine = opfDoc.querySelector('spine');
+  const ncxId = spine?.getAttribute('toc');
+  if (ncxId) {
+    const ncxItem = manifest.get(ncxId);
+    if (ncxItem) {
+      const ncxPath = opfDir + ncxItem.href;
+      const ncxContent = await zip.file(ncxPath)?.async('text');
+      if (ncxContent) {
+        const toc = parseNcxToc(ncxContent);
+        if (toc.length > 0) return toc;
+      }
+    }
+  }
+
+  // Fallback: look for toc.ncx in common locations
+  const commonNcxPaths = ['toc.ncx', opfDir + 'toc.ncx', 'OEBPS/toc.ncx'];
+  for (const ncxPath of commonNcxPaths) {
+    const ncxContent = await zip.file(ncxPath)?.async('text');
+    if (ncxContent) {
+      const toc = parseNcxToc(ncxContent);
+      if (toc.length > 0) return toc;
+    }
+  }
+
+  return [];
+}
+
+// Parse EPUB 2 NCX format
+function parseNcxToc(ncxContent: string): RawTocEntry[] {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(ncxContent, 'application/xml');
+  const entries: RawTocEntry[] = [];
+
+  function parseNavPoint(navPoint: Element, level: number) {
+    const textEl = navPoint.querySelector(':scope > navLabel > text');
+    const contentEl = navPoint.querySelector(':scope > content');
+
+    const title = textEl?.textContent?.trim() || '';
+    const href = contentEl?.getAttribute('src') || '';
+
+    if (title && href) {
+      entries.push({ title, href: decodeURIComponent(href), level });
+    }
+
+    // Parse nested navPoints
+    const childNavPoints = navPoint.querySelectorAll(':scope > navPoint');
+    childNavPoints.forEach(child => parseNavPoint(child, level + 1));
+  }
+
+  const navMap = doc.querySelector('navMap');
+  if (navMap) {
+    const topLevelNavPoints = navMap.querySelectorAll(':scope > navPoint');
+    topLevelNavPoints.forEach(navPoint => parseNavPoint(navPoint, 1));
+  }
+
+  return entries;
+}
+
+// Parse EPUB 3 NAV format
+function parseNavToc(navContent: string): RawTocEntry[] {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(navContent, 'application/xhtml+xml');
+  const entries: RawTocEntry[] = [];
+
+  // Find the nav element with epub:type="toc" or just the first nav with a list
+  const tocNav = doc.querySelector('nav[epub\\:type="toc"], nav[*|type="toc"]') ||
+                 doc.querySelector('nav');
+
+  if (!tocNav) return entries;
+
+  function parseListItem(li: Element, level: number) {
+    const anchor = li.querySelector(':scope > a');
+    if (anchor) {
+      const title = anchor.textContent?.trim() || '';
+      const href = anchor.getAttribute('href') || '';
+
+      if (title && href) {
+        entries.push({ title, href: decodeURIComponent(href), level });
+      }
+    }
+
+    // Parse nested lists
+    const nestedList = li.querySelector(':scope > ol, :scope > ul');
+    if (nestedList) {
+      const nestedItems = nestedList.querySelectorAll(':scope > li');
+      nestedItems.forEach(item => parseListItem(item, level + 1));
+    }
+  }
+
+  const topList = tocNav.querySelector('ol, ul');
+  if (topList) {
+    const topItems = topList.querySelectorAll(':scope > li');
+    topItems.forEach(item => parseListItem(item, 1));
+  }
+
+  return entries;
+}
+
+// Map TOC hrefs to word indices
+function mapTocToWordIndices(
+  rawToc: RawTocEntry[],
+  fileWordPositions: Map<string, number>,
+  opfDir: string
+): TocEntry[] {
+  return rawToc.map(entry => {
+    // Remove fragment identifier for file matching
+    const hrefWithoutFragment = entry.href.split('#')[0] ?? '';
+
+    // Try different path variations
+    let wordIndex = fileWordPositions.get(hrefWithoutFragment);
+
+    if (wordIndex === undefined && hrefWithoutFragment) {
+      wordIndex = fileWordPositions.get(opfDir + hrefWithoutFragment);
+    }
+
+    // Try without leading path components
+    if (wordIndex === undefined && hrefWithoutFragment) {
+      const fileName = hrefWithoutFragment.split('/').pop() ?? '';
+      for (const [key, value] of fileWordPositions) {
+        if (key.endsWith('/' + fileName) || key === fileName) {
+          wordIndex = value;
+          break;
+        }
+      }
+    }
+
+    return {
+      title: entry.title,
+      href: entry.href,
+      wordIndex: wordIndex ?? 0,
+      level: entry.level,
+    };
+  }).filter(entry => entry.title.length > 0);
 }

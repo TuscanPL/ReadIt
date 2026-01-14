@@ -1,5 +1,5 @@
 import { ref, onMounted } from 'vue';
-import type { ReadingSession, StopPoint, AppSettings } from '../types';
+import type { ReadingSession, StopPoint, AppSettings, TocEntry } from '../types';
 import * as storage from '../services/storage';
 
 export function useStorage() {
@@ -16,8 +16,8 @@ export function useStorage() {
     }
   }
 
-  function createSession(fileName: string, content: string): ReadingSession {
-    const session = storage.createSession(fileName, content);
+  function createSession(fileName: string, content: string, toc?: TocEntry[]): ReadingSession {
+    const session = storage.createSession(fileName, content, toc);
     loadSessions();
     return session;
   }

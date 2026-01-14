@@ -1,4 +1,4 @@
-import type { StorageData, ReadingSession, StopPoint, AppSettings } from '../types';
+import type { StorageData, ReadingSession, StopPoint, AppSettings, TocEntry } from '../types';
 
 const STORAGE_KEY = 'readit_data';
 const MAX_STOP_POINTS = 10;
@@ -63,7 +63,7 @@ export function setCurrentSession(id: string | null): void {
   saveData(data);
 }
 
-export function createSession(fileName: string, content: string): ReadingSession {
+export function createSession(fileName: string, content: string, toc?: TocEntry[]): ReadingSession {
   const data = loadData();
   const words = content.trim().split(/\s+/);
 
@@ -73,6 +73,7 @@ export function createSession(fileName: string, content: string): ReadingSession
     content,
     currentWordIndex: 0,
     totalWords: words.length,
+    toc,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };

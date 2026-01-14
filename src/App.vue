@@ -42,8 +42,8 @@ onMounted(() => {
   }
 });
 
-function handleFileLoaded(fileName: string, content: string) {
-  createSession(fileName, content);
+function handleFileLoaded(fileName: string, content: string, toc?: import('./types').TocEntry[]) {
+  createSession(fileName, content, toc);
   currentView.value = 'reader';
 }
 
